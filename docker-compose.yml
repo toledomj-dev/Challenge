@@ -1,0 +1,36 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: challenge_db
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=TuPasswordFuerte123!
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    # Esta sección verifica si SQL Server ya acepta conexiones
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'TuPasswordFuerte123!' -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: challenge-webapi
+    build:
+      context: ./Challenge.WebApi
+      dockerfile: Dockerfile
+    container_name: challenge_api
+    ports:
+      - "8081:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db;Database=ChallengeDB;User Id=sa;Password=TuPasswordFuerte123!;TrustServerCertificate=True;
+    # Aquí le decimos que espere a que el 'db' esté 'healthy'
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mssql_data:
